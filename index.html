@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090909">
+<title>REDWAVE — MP4 to MP3</title>
+<style>
+:root{color-scheme:dark;--bg:#080808;--panel:#111;--red:#ff303b;--muted:#aaa;--line:#482025}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#321014 0%,#10090a 38%,var(--bg) 75%);color:#f5f5f5;font-family:Tahoma,Arial,sans-serif;display:grid;place-items:center;padding:24px}
+main{width:min(100%,680px)}.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}.brand{font-weight:900;letter-spacing:3px;color:#fff;font-size:18px}.brand b{color:var(--red)}.status{font-size:11px;color:#8de0a9;border:1px solid #285c3a;padding:7px 10px;border-radius:99px}
+.card{background:linear-gradient(145deg,#151515,#0c0c0c);border:1px solid var(--line);border-radius:22px;padding:clamp(22px,5vw,38px);box-shadow:0 18px 70px #0009,0 0 35px #d21c2710}
+h1{font-size:clamp(28px,6vw,42px);margin:0 0 10px;line-height:1.25}h1 span{color:var(--red)}.sub{color:var(--muted);line-height:1.8;margin:0 0 28px;font-size:14px}
+.drop{border:1.5px dashed #71313a;border-radius:17px;padding:32px 18px;text-align:center;background:#1a0e10;transition:.2s;cursor:pointer}.drop.drag{background:#301216;border-color:var(--red)}.uploadIcon{font-size:36px;color:var(--red);margin-bottom:12px}.drop strong{display:block;margin-bottom:8px}.drop small{color:var(--muted)}input[type=file]{display:none}
+.file{display:none;margin-top:16px;padding:13px 15px;border-radius:12px;background:#1b1b1b;border:1px solid #333;align-items:center;justify-content:space-between;gap:12px}.file.show{display:flex}.filename{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.filesize{font-size:11px;color:var(--muted);white-space:nowrap}
+button,.download{border:0;border-radius:12px;padding:14px 18px;font-weight:800;font-size:14px;cursor:pointer;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.primary{width:100%;margin-top:20px;background:linear-gradient(100deg,#c91828,#ff3944);color:white;box-shadow:0 8px 25px #f22a3430}.primary:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}button:disabled{opacity:.45;cursor:not-allowed}
+.progressWrap{display:none;margin-top:22px}.progressWrap.show{display:block}.progressHead{display:flex;justify-content:space-between;font-size:12px;color:#ddd;margin-bottom:9px}.bar{height:8px;border-radius:99px;background:#292929;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#b91627,#ff555d);transition:width .2s}
+.message{min-height:22px;margin-top:14px;color:#ff858b;font-size:12px;line-height:1.7}.result{display:none;margin-top:20px;padding:16px;border:1px solid #285c3a;background:#0d1b12;border-radius:14px}.result.show{display:block}.result strong{display:block;color:#9ce5b0;margin-bottom:12px}.download{background:#1d6738;color:white;width:100%}
+.note{font-size:11px;color:#888;line-height:1.8;margin-top:24px;text-align:center}.footer{text-align:center;color:#666;font-size:10px;margin-top:18px;letter-spacing:1px}
+@media(max-width:420px){body{padding:14px}.card{padding:22px 17px}.drop{padding:26px 12px}}
+</style>
+</head>
+<body>
+<main>
+ <div class="top"><div class="brand">RED<b>WAVE</b> / AUDIO</div><div class="status">● جاهز للتحويل</div></div>
+ <section class="card">
+  <h1>حوّل الفيديو إلى <span>MP3</span></h1>
+  <p class="sub">استخرج الصوت من ملفات MP4 بسهولة. اختر الفيديو ثم ابدأ التحويل ونزّل ملف الصوت.</p>
+  <label class="drop" id="drop" for="picker">
+   <div class="uploadIcon">⇧</div>
+   <strong>اسحب ملف MP4 إلى هنا</strong>
+   <small>أو اضغط لاختيار فيديو من جهازك</small>
+  </label>
+  <input id="picker" type="file" accept="video/mp4,.mp4,video/*">
+  <div class="file" id="fileInfo"><span class="filename" id="fileName"></span><span class="filesize" id="fileSize"></span></div>
+  <button class="primary" id="convert" disabled>✦ تحويل إلى MP3</button>
+  <div class="progressWrap" id="progressWrap">
+   <div class="progressHead"><span id="progressText">تهيئة محرك التحويل...</span><span id="percent">0%</span></div>
+   <div class="bar"><div class="fill" id="fill"></div></div>
+  </div>
+  <div class="message" id="message" role="status" aria-live="polite"></div>
+  <div class="result" id="result"><strong>✓ اكتمل التحويل بنجاح</strong><a class="download" id="download" download="audio.mp3">↓ تنزيل ملف MP3</a></div>
+  <p class="note">تتم معالجة الملف داخل متصفحك باستخدام FFmpeg.wasm. قد يستغرق التحميل الأول لمحرك التحويل بعض الوقت. لا تغلق الصفحة أثناء التحويل.</p>
+ </section>
+ <div class="footer">REDWAVE AUDIO CONVERTER · MP4 → MP3</div>
+</main>
+<script type="module">
+import { FFmpeg } from 'https://esm.sh/@ffmpeg/ffmpeg@0.12.10';
+import { toBlobURL } from 'https://esm.sh/@ffmpeg/util@0.12.1';
+
+const $ = id => document.getElementById(id);
+const picker=$('picker'), drop=$('drop'), convert=$('convert');
+let selected=null, ffmpeg=null, outputUrl=null, busy=false;
+
+function setMessage(text, bad=false){$('message').textContent=text;$('message').style.color=bad?'#ff858b':'#aaa'}
+function readableError(err){
+ const s=String(err?.message||err||'Unknown error');
+ if(location.protocol==='content:'||location.protocol==='file:'){
+  return 'المتصفح فتح الصفحة كملف محلي (content:// أو file://)، وقد يمنع تشغيل محرك FFmpeg. ارفع الموقع إلى استضافة HTTPS مثل GitHub Pages ثم افتحه من الرابط.';
+ }
+ if(/fetch|network|failed to load|wasm|worker|cross-origin|mime/i.test(s)){
+  return 'تعذّر تحميل ملفات محرك FFmpeg. جرّب تحديث الصفحة والتأكد من السماح بتحميل ملفات الموقع، أو افتح الموقع من رابط HTTPS.';
+ }
+ return 'فشل التحويل: '+s.slice(0,220);
+}
+function formatSize(n){if(n<1024*1024)return (n/1024).toFixed(1)+' KB';return (n/1024/1024).toFixed(1)+' MB'}
+function choose(file){
+ if(!file)return;
+ if(!file.type.startsWith('video/')&&!file.name.toLowerCase().endsWith('.mp4')){setMessage('يرجى اختيار ملف فيديو MP4 صالحاً.',true);return}
+ selected=file;$('fileName').textContent=file.name;$('fileSize').textContent=formatSize(file.size);$('fileInfo').classList.add('show');
+ convert.disabled=false;$('result').classList.remove('show');setMessage('تم اختيار الفيديو. يمكنك بدء التحويل.');
+ if(outputUrl){URL.revokeObjectURL(outputUrl);outputUrl=null}
+}
+picker.addEventListener('change',e=>choose(e.target.files[0]));
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')}));
+drop.addEventListener('drop',e=>choose(e.dataTransfer.files[0]));
+
+async function loadEngine(){
+ if(ffmpeg?.loaded)return;
+ ffmpeg=new FFmpeg();
+ ffmpeg.on('progress',({progress})=>{
+  const p=Math.max(0,Math.min(99,Math.round(progress*100)));
+  $('fill').style.width=p+'%';$('percent').textContent=p+'%';$('progressText').textContent='جارٍ استخراج الصوت...';
+ });
+ const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+ const coreURL=await toBlobURL(base+'/ffmpeg-core.js','text/javascript');
+ const wasmURL=await toBlobURL(base+'/ffmpeg-core.wasm','application/wasm');
+ await ffmpeg.load({coreURL,wasmURL});
+}
+convert.addEventListener('click',async()=>{
+ if(!selected||busy)return;
+ if(location.protocol==='content:'||location.protocol==='file:'){
+  setMessage('أنت تفتح الموقع كملف محلي. هذا المتصفح قد يمنع تشغيل FFmpeg.wasm من content://. شغّل الموقع من رابط HTTPS (استضافة ويب) ثم أعد المحاولة.',true);
+  return;
+ }
+ busy=true;convert.disabled=true;$('progressWrap').classList.add('show');$('fill').style.width='0%';$('percent').textContent='0%';$('progressText').textContent='تحميل محرك التحويل...';$('result').classList.remove('show');setMessage('يتم تجهيز محرك التحويل. قد يحتاج التحميل الأول إلى اتصال بالإنترنت.');
+ const input='input_video.mp4', output='converted_audio.mp3';
+ try{
+  await loadEngine();
+  $('progressText').textContent='قراءة الفيديو...';
+  await ffmpeg.writeFile(input,new Uint8Array(await selected.arrayBuffer()));
+  $('progressText').textContent='جارٍ استخراج الصوت...';
+  await ffmpeg.exec(['-i',input,'-vn','-codec:a','libmp3lame','-q:a','2',output]);
+  const data=await ffmpeg.readFile(output);
+  const blob=new Blob([data.buffer],{type:'audio/mpeg'});
+  if(outputUrl)URL.revokeObjectURL(outputUrl);
+  outputUrl=URL.createObjectURL(blob);
+  const link=$('download');link.href=outputUrl;
+  const baseName=selected.name.replace(/\.[^.]+$/,'')||'audio';link.download=baseName+'.mp3';
+  $('fill').style.width='100%';$('percent').textContent='100%';$('progressText').textContent='اكتمل التحويل';
+  $('result').classList.add('show');setMessage('تم إنشاء ملف MP3 بنجاح.');
+  await ffmpeg.deleteFile(input);await ffmpeg.deleteFile(output);
+ }catch(err){
+  console.error('FFmpeg conversion error:',err);setMessage(readableError(err),true);
+  $('progressText').textContent='فشل التحويل';
+ }finally{busy=false;convert.disabled=!selected}
+});
+window.addEventListener('beforeunload',()=>{if(outputUrl)URL.revokeObjectURL(outputUrl)});
+</script>
+</body>
+</html>
